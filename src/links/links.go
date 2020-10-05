@@ -1,4 +1,4 @@
-package main
+package links
 
 import (
 	"fmt"
@@ -10,7 +10,8 @@ import (
 
 // Crawl ...
 func Crawl(url string) []string {
-	fmt.Println(url)
+	//fmt.Println(url)
+
 	list, err := Extract(url)
 	if err != nil {
 		log.Print(err)
@@ -27,8 +28,9 @@ func Extract(url string) ([]string, error) {
 	}
 
 	defer response.Body.Close()
+
 	if response.StatusCode != http.StatusOK {
-		fmt.Printf("Link with URL {%s} responds status code: %d", url, response.StatusCode)
+		fmt.Printf("Link with URL {%s} responds status code: %d\n", url, response.StatusCode)
 	}
 
 	doc, err := html.Parse(response.Body)
@@ -38,6 +40,7 @@ func Extract(url string) ([]string, error) {
 	}
 
 	var links []string
+
 	visitNode := func(n *html.Node) {
 		if n.Type == html.ElementNode && n.Data == "a" {
 			for _, a := range n.Attr {
@@ -47,7 +50,7 @@ func Extract(url string) ([]string, error) {
 
 				link, err := response.Request.URL.Parse(a.Val)
 				if err != nil {
-					fmt.Printf("Link with incorrect URL: %s", url)
+					fmt.Printf("Error: %s \n", err.Error())
 					continue
 				}
 
@@ -57,6 +60,7 @@ func Extract(url string) ([]string, error) {
 	}
 
 	ForEachNode(doc, visitNode)
+
 	return links, nil
 }
 

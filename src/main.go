@@ -1,27 +1,32 @@
 package main
 
-import "os"
+import (
+	"github.com/ythosa/linkschecker/src/links"
+	"os"
+)
 
 func main() {
 	worklist := make(chan []string)
+
 	var n int // Number of waiting to be sent to the list
 
-	// Start with cmd arguments
 	n++
+
 	go func() {
-		worklist <- os.Args[1:]
+		worklist <- os.Args[1:] // Start with cmd arguments
 	}()
 
-	// Concurrency scan
 	seen := make(map[string]bool)
+	// Concurrency scan
 	for ; n > 0; n-- {
 		list := <-worklist
 		for _, link := range list {
 			if !seen[link] {
 				seen[link] = true
 				n++
+
 				go func(link string) {
-					worklist <- Crawl(link)
+					worklist <- links.Crawl(link)
 				}(link)
 			}
 		}

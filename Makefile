@@ -1,14 +1,14 @@
 .PHONY: build
 build:
-	go build -o linkschecker -v ./src/main.go
+	go build -o build/debug/linkschecker -v ./src/main.go
 
 .PHONY: windows-build
 windows-build:
-	env GOOS=windows GOARCH=amd64 go build -o build/linkschecker.exe -v ./src/main.go
+	env GOOS=windows GOARCH=amd64 go build -o build/release/linkschecker.exe -v ./src/main.go
 
 .PHONY: linux-build
 linux-build:
-	env GOOS=linux GOARCH=amd64 go build -o build/linkschecker -v ./src/main.go
+	env GOOS=linux GOARCH=amd64 go build -o build/release/linkschecker -v ./src/main.go
 
 .PHONY: run
 run:

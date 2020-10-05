@@ -21,3 +21,5 @@ vendor/
 linkschecker
 linkschecker.exe
 build/
+
+test
