@@ -5,10 +5,11 @@ run:
 linters:
   enable-all: true
   disable:
-#    - goimports
-#    - gofmt
+    - goimports
+    - gofmt
     - gosec
-#    - wsl
+    - wsl
+    - unparam
 
 linters-settings:
   funlen:

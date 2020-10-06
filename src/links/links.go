@@ -1,75 +1,67 @@
 package links
 
 import (
-	"fmt"
-	"log"
-	"net/http"
+    "net/http"
 
-	"golang.org/x/net/html"
+    "golang.org/x/net/html"
 )
 
-// Crawl ...
-func Crawl(url string) []string {
-	//fmt.Println(url)
+func Check(url string) (*http.Response, *html.Node, error) {
+    response, err := http.Get(url)
+    if err != nil {
+        return nil, nil, NewUnreachableSiteException(url)
+    }
 
-	list, err := Extract(url)
-	if err != nil {
-		log.Print(err)
-	}
+    defer response.Body.Close()
 
-	return list
+    if response.StatusCode != http.StatusOK {
+        return nil, nil, NewBadStatusCodeException(url, response.StatusCode)
+    }
+
+    doc, err := html.Parse(response.Body)
+    if err != nil {
+        return nil, nil, NewInvalidResponseTypeException(url)
+    }
+
+    return response, doc, nil
 }
 
 func Extract(url string) ([]string, error) {
-	response, err := http.Get(url)
-	if err != nil {
-		log.Println(err.Error())
-		return nil, err
-	}
+    response, doc, err := Check(url)
+    if err != nil {
+        return nil, err
+    }
 
-	defer response.Body.Close()
+    var links []string
 
-	if response.StatusCode != http.StatusOK {
-		fmt.Printf("Link with URL {%s} responds status code: %d\n", url, response.StatusCode)
-	}
+    visitNode := func(n *html.Node) {
+        if n.Type == html.ElementNode && n.Data == "a" {
+            for _, a := range n.Attr {
+                if a.Key != "href" {
+                    continue
+                }
 
-	doc, err := html.Parse(response.Body)
-	if err != nil {
-		log.Println(err.Error())
-		return nil, err
-	}
+                link, err := response.Request.URL.Parse(a.Val)
+                if err != nil {
+                    return
+                }
 
-	var links []string
+                links = append(links, link.String())
+            }
+        }
+    }
 
-	visitNode := func(n *html.Node) {
-		if n.Type == html.ElementNode && n.Data == "a" {
-			for _, a := range n.Attr {
-				if a.Key != "href" {
-					continue
-				}
+    ForEachNode(doc, visitNode)
 
-				link, err := response.Request.URL.Parse(a.Val)
-				if err != nil {
-					fmt.Printf("Error: %s \n", err.Error())
-					continue
-				}
-
-				links = append(links, link.String())
-			}
-		}
-	}
-
-	ForEachNode(doc, visitNode)
-
-	return links, nil
+    return links, nil
 }
 
 func ForEachNode(node *html.Node, f func(n *html.Node)) {
-	if f != nil {
-		f(node)
-	}
+    if f != nil {
+        f(node)
+    }
 
-	for c := node.FirstChild; c != nil; c = c.NextSibling {
-		ForEachNode(c, f)
-	}
+    for c := node.FirstChild; c != nil; c = c.NextSibling {
+        ForEachNode(c, f)
+    }
 }
