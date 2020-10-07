@@ -5,6 +5,7 @@ import (
     "github.com/ythosa/linkschecker/src/links"
     "os"
     "strings"
+    "sync"
 )
 
 func main() {
@@ -15,7 +16,7 @@ func main() {
 
     baseURL := os.Args[1]
     worklist := make(chan []links.ParsingURL)
-    errlist := make(chan links.BadURL, 500)
+    errlist := make([]links.BadURL, 0)
 
     var n int
 
@@ -24,13 +25,8 @@ func main() {
         worklist <- []links.ParsingURL{links.ParsingURL(baseURL)}
     }()
 
-    go func() {
-        for {
-            fmt.Println((<-errlist).Err)
-        }
-    }()
-
     seen := make(map[links.ParsingURL]bool)
+    mux := sync.Mutex{}
     for ; n > 0; n-- {
         slist := <-worklist
         if slist == nil {
@@ -43,9 +39,11 @@ func main() {
                 n++
                 go func(link links.ParsingURL) {
                     res, doc, err := links.CheckURL(link)
-                    //fmt.Println(err)
                     if err != nil {
-                        errlist <- links.BadURL{ParsingURL: link, Err: err}
+                        mux.Lock()
+                        errlist = append(errlist, links.BadURL{ParsingURL: link, Err: err})
+                        mux.Unlock()
+
                         worklist <- nil
                         return
                     }
@@ -58,5 +56,9 @@ func main() {
                 }(link)
             }
         }
+    }
+
+    for _, e := range errlist {
+        fmt.Println(e.Err)
     }
 }
