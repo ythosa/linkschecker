@@ -2,74 +2,60 @@ package main
 
 import (
     "fmt"
-    "log"
+    "github.com/ythosa/linkschecker/src/links"
     "os"
     "strings"
-
-    "github.com/ythosa/linkschecker/src/links"
 )
 
-func Crawl(link string, baseURL string, worklist *chan []string) error {
-    var err error
-
-    if strings.HasPrefix(link, baseURL) {
-        go func(link string) {
-            parsed, err := links.Extract(link)
-            if err != nil {
-                *worklist <- nil
-                log.Println(err)
-            }
-            *worklist <- parsed
-        }(link)
-    }
-
-    go func(link string) {
-        _, _, err := links.Check(link)
-        if err != nil {
-            log.Println(err)
-        }
-        *worklist <- nil
-    }(link)
-
-    return err
-}
-
 func main() {
-    worklist := make(chan []string)
-
-    var baseURL string
-
-    var n int // Number of waiting to be sent to the list
-
     if len(os.Args) == 1 {
-        fmt.Println("Pls enter sthg :(")
+        fmt.Println("Please, pass something in arguments :(")
         os.Exit(1)
     }
 
-    baseURL = os.Args[1]
-    n++
+    baseURL := os.Args[1]
+    worklist := make(chan []links.ParsingURL)
+    errlist := make(chan links.BadURL, 500)
 
+    var n int
+
+    n++
     go func() {
-        worklist <- []string{baseURL} // Start with cmd arguments
+        worklist <- []links.ParsingURL{links.ParsingURL(baseURL)}
     }()
 
-    seen := make(map[string]bool)
-    // Concurrency scan
+    go func() {
+        for {
+            fmt.Println((<-errlist).Err)
+        }
+    }()
+
+    seen := make(map[links.ParsingURL]bool)
     for ; n > 0; n-- {
-        list := <-worklist
-        if list == nil {
+        slist := <-worklist
+        if slist == nil {
             continue
         }
 
-        for _, link := range list {
+        for _, link := range slist {
             if !seen[link] {
                 seen[link] = true
-
                 n++
+                go func(link links.ParsingURL) {
+                    res, doc, err := links.CheckURL(link)
+                    //fmt.Println(err)
+                    if err != nil {
+                        errlist <- links.BadURL{ParsingURL: link, Err: err}
+                        worklist <- nil
+                        return
+                    }
 
-                if err := Crawl(link, baseURL, &worklist); err != nil {
-                    log.Println(err)
-                }
+                    if strings.HasPrefix(string(link), baseURL) {
+                        worklist <- links.Extract(res, doc)
+                    } else {
+                        worklist <- nil
+                    }
+                }(link)
             }
         }
     }

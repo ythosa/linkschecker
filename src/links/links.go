@@ -6,34 +6,30 @@ import (
     "golang.org/x/net/html"
 )
 
-func Check(url string) (*http.Response, *html.Node, error) {
-    response, err := http.Get(url)
+// CheckURL checks passed url in arguments and returns specified error if it is incorrect.
+func CheckURL(url ParsingURL) (*http.Response, *html.Node, error) {
+    response, err := http.Get(string(url))
     if err != nil {
-        return nil, nil, NewUnreachableSiteException(url)
+        return nil, nil, NewUnreachableSiteException(string(url))
     }
 
     defer response.Body.Close()
 
     if response.StatusCode != http.StatusOK {
-        return nil, nil, NewBadStatusCodeException(url, response.StatusCode)
+        return nil, nil, NewBadStatusCodeException(string(url), response.StatusCode)
     }
 
     doc, err := html.Parse(response.Body)
     if err != nil {
-        return nil, nil, NewInvalidResponseTypeException(url)
+        return nil, nil, NewInvalidResponseTypeException(string(url))
     }
 
     return response, doc, nil
 }
 
-func Extract(url string) ([]string, error) {
-    response, doc, err := Check(url)
-    if err != nil {
-        return nil, err
-    }
-
-    var links []string
-
+// Extract extracts all links from passed URL.
+func Extract(response *http.Response, doc *html.Node) []ParsingURL {
+    var links []ParsingURL
     visitNode := func(n *html.Node) {
         if n.Type == html.ElementNode && n.Data == "a" {
             for _, a := range n.Attr {
@@ -46,16 +42,17 @@ func Extract(url string) ([]string, error) {
                     return
                 }
 
-                links = append(links, link.String())
+                links = append(links, ParsingURL(link.String()))
             }
         }
     }
 
     ForEachNode(doc, visitNode)
 
-    return links, nil
+    return links
 }
 
+// ForEachNode recursive runs throw DOM tree and finds links.
 func ForEachNode(node *html.Node, f func(n *html.Node)) {
     if f != nil {
         f(node)

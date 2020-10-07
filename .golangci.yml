@@ -9,7 +9,6 @@ linters:
     - gofmt
     - gosec
     - wsl
-    - unparam
 
 linters-settings:
   funlen:
