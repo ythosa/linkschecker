@@ -2,15 +2,20 @@ package links
 
 import "fmt"
 
+// badStatusCodeException is type of error where the server under URL
+// answers with status code other than 200.
 type badStatusCodeException struct {
     url        ParsingURL
     statusCode int
 }
 
+// unreachableSiteException is type of error where the server under URL is unreachable.
 type unreachableSiteException struct {
     url ParsingURL
 }
 
+// invalidResponseTypeException is type of error where the server under URL
+// returns an invalid response body.
 type invalidResponseTypeException struct {
     url ParsingURL
 }

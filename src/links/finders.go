@@ -1,12 +1,14 @@
 package links
 
 import (
-    "golang.org/x/net/html"
     "net/http"
     "strings"
     "sync"
+
+    "golang.org/x/net/html"
 )
 
+// isUnderBaseURL returns true if link placed under baseURL, otherwise - false.
 func isUnderBaseURL(link ParsingURL, baseURL ParsingURL) bool {
     return strings.HasPrefix(string(link), string(baseURL))
 }

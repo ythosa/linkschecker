@@ -2,8 +2,9 @@ package main
 
 import (
     "fmt"
-    "github.com/ythosa/linkschecker/src/links"
     "os"
+
+    "github.com/ythosa/linkschecker/src/links"
 )
 
 func main() {
