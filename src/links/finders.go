@@ -7,6 +7,10 @@ import (
     "sync"
 )
 
+func isUnderBaseURL(link ParsingURL, baseURL ParsingURL) bool {
+    return strings.HasPrefix(string(link), string(baseURL))
+}
+
 // CheckURL checks passed url in arguments and returns specified error if it is incorrect.
 func CheckURL(url ParsingURL) (*http.Response, *html.Node, error) {
     response, err := http.Get(string(url))
@@ -28,50 +32,51 @@ func CheckURL(url ParsingURL) (*http.Response, *html.Node, error) {
     return response, doc, nil
 }
 
-// FindBrokenLinks finds broken links on site and returns array of type BadURL as result.
-func FindBrokenLinks(baseURL ParsingURL) []BadURL {
-    worklist := make(chan []ParsingURL)
-    errlist := make([]BadURL, 0)
+// FindBrokenLinks finds broken links on site and returns array of type BrokenURL as result.
+func FindBrokenLinks(baseURL ParsingURL) []BrokenURL {
+    workList := make(chan []ParsingURL) // channel of links to be checked
+    errList := make([]BrokenURL, 0)     // slice of broken links
 
-    var n int
+    var workListElementsNum int
+    var mux sync.Mutex
 
-    n++
+    workListElementsNum++
     go func() {
-        worklist <- []ParsingURL{baseURL}
+        workList <- []ParsingURL{baseURL} // Start with baseURL
     }()
 
-    seen := make(map[ParsingURL]bool)
-    mux := sync.Mutex{}
-    for ; n > 0; n-- {
-        slist := <-worklist
-        if slist == nil {
+    seenURLs := make(map[ParsingURL]bool) // map of seen URLs
+    for ; workListElementsNum > 0; workListElementsNum-- {
+        extractedLinks := <-workList
+        if extractedLinks == nil {
             continue
         }
 
-        for _, link := range slist {
-            if !seen[link] {
-                seen[link] = true
-                n++
+        for _, link := range extractedLinks {
+            if !seenURLs[link] {
+                seenURLs[link] = true
+                workListElementsNum++
+
                 go func(link ParsingURL) {
                     res, doc, err := CheckURL(link)
                     if err != nil {
                         mux.Lock()
-                        errlist = append(errlist, BadURL{ParsingURL: link, Err: err})
+                        errList = append(errList, BrokenURL{ParsingURL: link, Err: err})
                         mux.Unlock()
-
-                        worklist <- nil
+                        workList <- nil
                         return
                     }
 
-                    if strings.HasPrefix(string(link), string(baseURL)) {
-                        worklist <- Extract(res, doc)
-                    } else {
-                        worklist <- nil
+                    if isUnderBaseURL(link, baseURL) {
+                        workList <- Extract(res, doc)
+                        return
                     }
+
+                    workList <- nil
                 }(link)
             }
         }
     }
 
-    return errlist
+    return errList
 }

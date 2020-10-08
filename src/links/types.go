@@ -2,7 +2,7 @@ package links
 
 type ParsingURL string
 
-type BadURL struct {
+type BrokenURL struct {
     ParsingURL
     Err error
 }
