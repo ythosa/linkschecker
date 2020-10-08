@@ -3,27 +3,27 @@ package links
 import "fmt"
 
 type badStatusCodeException struct {
-    url        string
+    url        ParsingURL
     statusCode int
 }
 
 type unreachableSiteException struct {
-    url string
+    url ParsingURL
 }
 
 type invalidResponseTypeException struct {
-    url string
+    url ParsingURL
 }
 
-func NewBadStatusCodeException(url string, statusCode int) error {
+func NewBadStatusCodeException(url ParsingURL, statusCode int) error {
     return &badStatusCodeException{url: url, statusCode: statusCode}
 }
 
-func NewUnreachableSiteException(url string) error {
+func NewUnreachableSiteException(url ParsingURL) error {
     return &unreachableSiteException{url: url}
 }
 
-func NewInvalidResponseTypeException(url string) error {
+func NewInvalidResponseTypeException(url ParsingURL) error {
     return &invalidResponseTypeException{url: url}
 }
 

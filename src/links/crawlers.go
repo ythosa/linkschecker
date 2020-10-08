@@ -6,27 +6,6 @@ import (
     "golang.org/x/net/html"
 )
 
-// CheckURL checks passed url in arguments and returns specified error if it is incorrect.
-func CheckURL(url ParsingURL) (*http.Response, *html.Node, error) {
-    response, err := http.Get(string(url))
-    if err != nil {
-        return nil, nil, NewUnreachableSiteException(string(url))
-    }
-
-    defer response.Body.Close()
-
-    if response.StatusCode != http.StatusOK {
-        return nil, nil, NewBadStatusCodeException(string(url), response.StatusCode)
-    }
-
-    doc, err := html.Parse(response.Body)
-    if err != nil {
-        return nil, nil, NewInvalidResponseTypeException(string(url))
-    }
-
-    return response, doc, nil
-}
-
 // Extract extracts all links from passed URL.
 func Extract(response *http.Response, doc *html.Node) []ParsingURL {
     var links []ParsingURL
