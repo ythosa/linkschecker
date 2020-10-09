@@ -1,15 +1,17 @@
 package apiserver
 
 import (
+    "context"
     "encoding/json"
     "fmt"
     "net/http"
     "os"
     "time"
 
+    "github.com/google/uuid"
+    "github.com/gorilla/handlers"
     "github.com/gorilla/mux"
     "github.com/sirupsen/logrus"
-    "github.com/gorilla/handlers"
 
     "github.com/ythosa/linkschecker/src/internal/app/apiserver/links"
 )
@@ -19,14 +21,14 @@ const ctxKeyRequestID ctxKey = iota
 type ctxKey int8
 
 type server struct {
-    router       *mux.Router
-    logger       *logrus.Logger
+    router *mux.Router
+    logger *logrus.Logger
 }
 
 func newServer() *server {
     s := &server{
-        router:       mux.NewRouter(),
-        logger:       logrus.New(),
+        router: mux.NewRouter(),
+        logger: logrus.New(),
     }
 
     s.configureRouter()
@@ -35,8 +37,17 @@ func newServer() *server {
 }
 
 func (s *server) configureRouter() {
+    s.router.Use(s.setRequestID)
     s.router.Use(s.logRequest)
     s.router.Use(handlers.CORS(handlers.AllowedOrigins([]string{"*"})))
+}
+
+func (s *server) setRequestID(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        id := uuid.New().String()
+        w.Header().Set("X-Request-ID", id)
+        next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKeyRequestID, id)))
+    })
 }
 
 func (s *server) logRequest(next http.Handler) http.Handler {
