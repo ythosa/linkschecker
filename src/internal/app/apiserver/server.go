@@ -38,7 +38,8 @@ func (s *server) configureRouter() {
     s.router.Use(s.setRequestID)
     s.router.Use(s.logRequest)
     s.router.Use(handlers.CORS(handlers.AllowedOrigins([]string{"*"})))
-    s.router.HandleFunc("/get_broken", s.handleFindBrokenLinks()).Methods("POST")
+    s.router.HandleFunc("/get_broken_links", s.handleFindBrokenLinks()).Methods("POST")
+    s.router.HandleFunc("/validate_link", s.handleLinkValidation()).Methods("POST")
 }
 
 func (s *server) setRequestID(next http.Handler) http.Handler {
@@ -95,6 +96,35 @@ func (s *server) handleFindBrokenLinks() http.HandlerFunc {
         }
 
         s.respond(w, http.StatusOK, map[string]interface{}{"broken_links": badLinks})
+    }
+}
+
+func (s *server) handleLinkValidation() func(http.ResponseWriter, *http.Request) {
+    type request struct {
+        Link links.ParsingURL `json:"link"`
+    }
+
+    type response struct {
+        OK bool `json:"ok"`
+        Error string `json:"error"`
+    }
+
+    return func(w http.ResponseWriter, r *http.Request) {
+        req := &request{}
+        if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+            s.error(w, http.StatusBadRequest, err)
+            return
+        }
+
+        res := response{}
+        _, _, isLinkValid := links.CheckURL(req.Link)
+        if isLinkValid != nil {
+            res.OK = false
+            res.Error = isLinkValid.Error()
+        } else {
+            res.OK = true
+        }
+        s.respond(w, http.StatusOK, res)
     }
 }
 
