@@ -3,9 +3,7 @@ package apiserver
 import (
     "context"
     "encoding/json"
-    "fmt"
     "net/http"
-    "os"
     "time"
 
     "github.com/google/uuid"
@@ -68,7 +66,7 @@ func (s *server) logRequest(next http.Handler) http.Handler {
             "completed with %d %s in %v\n",
             rw.code,
             http.StatusText(rw.code),
-            time.Now().Sub(start),
+            time.Since(start),
         )
     })
 }
@@ -82,37 +80,31 @@ func (s *server) handleFindBrokenLinks() http.HandlerFunc {
         BaseURL string `json:"base_url"`
     }
 
-    if len(os.Args) == 1 {
-        fmt.Println("Please, pass something in arguments :(")
-        os.Exit(1)
-    }
-
-    baseURL := links.ParsingURL(os.Args[1])
-
-    for _, errLink := range links.FindBrokenLinks(baseURL) {
-        fmt.Println(errLink.Err)
-    }
-
     return func(w http.ResponseWriter, r *http.Request) {
         req := &request{}
         if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-            s.error(w, r, http.StatusBadRequest, err)
+            s.error(w, http.StatusBadRequest, err)
             return
         }
 
         foundBrokenLinks := links.FindBrokenLinks(links.ParsingURL(req.BaseURL))
+        badLinks := make(map[string]string)
 
-        s.respond(w, r, http.StatusOK, map[string][]links.BrokenURL{"links": foundBrokenLinks})
+        for _, l := range foundBrokenLinks {
+            badLinks[string(l.ParsingURL)] = l.Err.Error()
+        }
+
+        s.respond(w, http.StatusOK, map[string]interface{}{"broken_links": badLinks})
     }
 }
 
-func (s *server) error(w http.ResponseWriter, r *http.Request, code int, err error) {
-    s.respond(w, r, code, map[string]string{"error": err.Error()})
+func (s *server) error(w http.ResponseWriter, code int, err error) {
+    s.respond(w, code, map[string]string{"error": err.Error()})
 }
 
-func (s *server) respond(w http.ResponseWriter, r *http.Request, code int, data interface{}) {
+func (s *server) respond(w http.ResponseWriter, code int, data interface{}) {
     w.WriteHeader(code)
     if data != nil {
-        json.NewEncoder(w).Encode(data)
+        _ = json.NewEncoder(w).Encode(data)
     }
 }
