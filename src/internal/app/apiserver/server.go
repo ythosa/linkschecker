@@ -77,6 +77,10 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) handleFindBrokenLinks() http.HandlerFunc {
+    type request struct {
+        BaseURL string `json:"base_url"`
+    }
+
     if len(os.Args) == 1 {
         fmt.Println("Please, pass something in arguments :(")
         os.Exit(1)
@@ -89,8 +93,20 @@ func (s *server) handleFindBrokenLinks() http.HandlerFunc {
     }
 
     return func(w http.ResponseWriter, r *http.Request) {
-        s.respond(w, r, http.StatusOK, "UAU")
+        req := &request{}
+        if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+            s.error(w, r, http.StatusBadRequest, err)
+            return
+        }
+
+        foundBrokenLinks := links.FindBrokenLinks(links.ParsingURL(req.BaseURL))
+
+        s.respond(w, r, http.StatusOK, map[string][]links.BrokenURL{"links": foundBrokenLinks})
     }
+}
+
+func (s *server) error(w http.ResponseWriter, r *http.Request, code int, err error) {
+    s.respond(w, r, code, map[string]string{"error": err.Error()})
 }
 
 func (s *server) respond(w http.ResponseWriter, r *http.Request, code int, data interface{}) {
