@@ -4,6 +4,7 @@ import (
     "context"
     "encoding/json"
     "net/http"
+    "sync"
     "time"
 
     "github.com/google/uuid"
@@ -40,6 +41,7 @@ func (s *server) configureRouter() {
     s.router.Use(handlers.CORS(handlers.AllowedOrigins([]string{"*"})))
     s.router.HandleFunc("/get_broken_links", s.handleFindBrokenLinks()).Methods("POST")
     s.router.HandleFunc("/validate_link", s.handleLinkValidation()).Methods("POST")
+    s.router.HandleFunc("/validate_links", s.handleLinksValidations()).Methods("POST")
 }
 
 func (s *server) setRequestID(next http.Handler) http.Handler {
@@ -105,7 +107,7 @@ func (s *server) handleLinkValidation() func(http.ResponseWriter, *http.Request)
     }
 
     type response struct {
-        OK bool `json:"ok"`
+        OK    bool   `json:"ok"`
         Error string `json:"error"`
     }
 
@@ -117,7 +119,7 @@ func (s *server) handleLinkValidation() func(http.ResponseWriter, *http.Request)
         }
 
         res := response{}
-        _, _, isLinkValid := links.CheckURL(req.Link)
+        _, _, isLinkValid := links.CheckURL(req.Link) // nolint:bodyclose
         if isLinkValid != nil {
             res.OK = false
             res.Error = isLinkValid.Error()
@@ -125,6 +127,54 @@ func (s *server) handleLinkValidation() func(http.ResponseWriter, *http.Request)
             res.OK = true
         }
         s.respond(w, http.StatusOK, res)
+    }
+}
+
+func (s *server) handleLinksValidations() func(http.ResponseWriter, *http.Request) {
+    type request struct {
+        Links []links.ParsingURL `json:"links"`
+    }
+
+    type responseElement struct {
+        URL   string `json:"url"`
+        Error string `json:"error"`
+    }
+
+    return func(w http.ResponseWriter, r *http.Request) {
+        req := &request{}
+        if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+            s.error(w, http.StatusBadRequest, err)
+            return
+        }
+
+        var wg sync.WaitGroup
+        var results sync.Map
+
+        for _, l := range req.Links {
+            wg.Add(1)
+            go func(l links.ParsingURL) {
+                defer wg.Done()
+                _, _, err := links.CheckURL(l) // nolint:bodyclose
+
+                if err != nil {
+                    results.Store(string(l), err.Error())
+                    return
+                }
+                results.Store(string(l), "null")
+            }(l)
+        }
+
+        wg.Wait()
+        response := make([]responseElement, 0)
+        results.Range(func(k, v interface{}) bool {
+            response = append(response, responseElement{
+                URL:   k.(string),
+                Error: v.(string),
+            })
+            return true
+        })
+
+        s.respond(w, http.StatusOK, response)
     }
 }
 
