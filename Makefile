@@ -4,15 +4,15 @@ build:
 
 .PHONY: windows-build
 windows-build:
-	env GOOS=windows GOARCH=amd64 go build -o build/release/linkschecker.exe -v ./src/main.go
+	env GOOS=windows GOARCH=amd64 go build -o build/release/linkschecker.exe -v ./src/cmd/apiserver/main.go
 
 .PHONY: linux-build
 linux-build:
-	env GOOS=linux GOARCH=amd64 go build -o build/release/linkschecker -v ./src/main.go
+	env GOOS=linux GOARCH=amd64 go build -o build/release/linkschecker -v ./src/cmd/apiserver/main.go
 
 .PHONY: run
 run:
-	go run ./src/main.go
+	go run ./src/cmd/apiserver/main.go
 
 .PHONY: lint
 lint:
