@@ -63,7 +63,7 @@ func FindBrokenLinks(baseURL ParsingURL) []BrokenURL {
                     res, doc, err := CheckURL(link)
                     if err != nil {
                         mux.Lock()
-                        errList = append(errList, BrokenURL{ParsingURL: link, Err: err})
+                        errList = append(errList, BrokenURL{ParsingURL: link, Error: err})
                         mux.Unlock()
                         workList <- nil
                         return

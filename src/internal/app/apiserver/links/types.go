@@ -6,5 +6,5 @@ type ParsingURL string
 // BrokenURL is type for broken links.
 type BrokenURL struct {
     ParsingURL       // Link URL
-    Err        error // Error of link
+    Error      error // Error of link
 }

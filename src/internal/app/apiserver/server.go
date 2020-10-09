@@ -94,7 +94,7 @@ func (s *server) handleFindBrokenLinks() http.HandlerFunc {
         badLinks := make(map[string]string)
 
         for _, l := range foundBrokenLinks {
-            badLinks[string(l.ParsingURL)] = l.Err.Error()
+            badLinks[string(l.ParsingURL)] = l.Error.Error()
         }
 
         s.respond(w, http.StatusOK, map[string]interface{}{"broken_links": badLinks})
@@ -148,31 +148,32 @@ func (s *server) handleLinksValidations() func(http.ResponseWriter, *http.Reques
         }
 
         var wg sync.WaitGroup
-        var results sync.Map
+        var mu sync.Mutex
+        var response []responseElement
 
         for _, l := range req.Links {
             wg.Add(1)
             go func(l links.ParsingURL) {
                 defer wg.Done()
                 _, _, err := links.CheckURL(l) // nolint:bodyclose
-
+                mu.Lock()
                 if err != nil {
-                    results.Store(string(l), err.Error())
+                    response = append(response, responseElement{
+                        URL: string(l),
+                        Error: err.Error(),
+                    })
+
                     return
                 }
-                results.Store(string(l), "null")
+                response = append(response, responseElement{
+                    URL: string(l),
+                    Error: "null",
+                })
+                mu.Unlock()
             }(l)
         }
 
         wg.Wait()
-        response := make([]responseElement, 0)
-        results.Range(func(k, v interface{}) bool {
-            response = append(response, responseElement{
-                URL:   k.(string),
-                Error: v.(string),
-            })
-            return true
-        })
 
         s.respond(w, http.StatusOK, response)
     }
