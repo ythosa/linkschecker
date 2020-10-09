@@ -1,6 +1,6 @@
 .PHONY: build
 build:
-	go build -o build/debug/linkschecker -v ./src/main.go
+	go build -o build/debug/linkschecker -v ./src/cmd/apiserver/main.go
 
 .PHONY: windows-build
 windows-build:

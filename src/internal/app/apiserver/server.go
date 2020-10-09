@@ -40,6 +40,7 @@ func (s *server) configureRouter() {
     s.router.Use(s.setRequestID)
     s.router.Use(s.logRequest)
     s.router.Use(handlers.CORS(handlers.AllowedOrigins([]string{"*"})))
+    s.router.HandleFunc("/get_broken", s.handleFindBrokenLinks()).Methods("POST")
 }
 
 func (s *server) setRequestID(next http.Handler) http.Handler {
