@@ -39,9 +39,9 @@ func (s *server) configureRouter() {
     s.router.Use(s.setRequestID)
     s.router.Use(s.logRequest)
     s.router.Use(handlers.CORS(handlers.AllowedOrigins([]string{"*"})))
-    s.router.HandleFunc("/get_broken_links", s.handleFindBrokenLinks()).Methods("POST")
-    s.router.HandleFunc("/validate_link", s.handleLinkValidation()).Methods("POST")
-    s.router.HandleFunc("/validate_links", s.handleLinksValidations()).Methods("POST")
+    s.router.HandleFunc("/get_broken_links", s.HandleFindBrokenLinks()).Methods("POST")
+    s.router.HandleFunc("/validate_link", s.HandleLinkValidation()).Methods("POST")
+    s.router.HandleFunc("/validate_links", s.HandleLinksValidations()).Methods("POST")
 }
 
 func (s *server) setRequestID(next http.Handler) http.Handler {
@@ -78,7 +78,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     s.router.ServeHTTP(w, r)
 }
 
-func (s *server) handleFindBrokenLinks() http.HandlerFunc {
+func (s *server) HandleFindBrokenLinks() http.HandlerFunc {
     type request struct {
         BaseURL string `json:"base_url"`
     }
@@ -101,36 +101,38 @@ func (s *server) handleFindBrokenLinks() http.HandlerFunc {
     }
 }
 
-func (s *server) handleLinkValidation() func(http.ResponseWriter, *http.Request) {
+func (s *server) HandleLinkValidation() func(http.ResponseWriter, *http.Request) {
     type request struct {
-        Link links.ParsingURL `json:"link"`
+        Link string `json:"link"`
     }
 
     type response struct {
-        OK    bool   `json:"ok"`
+        OK    string   `json:"ok"`
         Error string `json:"error"`
     }
 
     return func(w http.ResponseWriter, r *http.Request) {
         req := &request{}
-        if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+        decoder := json.NewDecoder(r.Body)
+        decoder.DisallowUnknownFields()
+        if err := decoder.Decode(req); err != nil {
             s.error(w, http.StatusBadRequest, err)
             return
         }
 
         res := response{}
-        _, _, isLinkValid := links.CheckURL(req.Link) // nolint:bodyclose
+        _, _, isLinkValid := links.CheckURL(links.ParsingURL(req.Link)) // nolint:bodyclose
         if isLinkValid != nil {
-            res.OK = false
+            res.OK = "false"
             res.Error = isLinkValid.Error()
         } else {
-            res.OK = true
+            res.OK = "true"
         }
         s.respond(w, http.StatusOK, res)
     }
 }
 
-func (s *server) handleLinksValidations() func(http.ResponseWriter, *http.Request) {
+func (s *server) HandleLinksValidations() func(http.ResponseWriter, *http.Request) {
     type request struct {
         Links []links.ParsingURL `json:"links"`
     }
@@ -159,14 +161,14 @@ func (s *server) handleLinksValidations() func(http.ResponseWriter, *http.Reques
                 mu.Lock()
                 if err != nil {
                     response = append(response, responseElement{
-                        URL: string(l),
+                        URL:   string(l),
                         Error: err.Error(),
                     })
 
                     return
                 }
                 response = append(response, responseElement{
-                    URL: string(l),
+                    URL:   string(l),
                     Error: "null",
                 })
                 mu.Unlock()
