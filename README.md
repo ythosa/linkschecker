@@ -46,9 +46,14 @@ LinkChecker is service for checking links. It can be used in large systems as a 
    </tr>
    <tr>
      <td> /validate_link </td>
-     <td> Validates link </td>
+     <td> Validates link and returns `ok` and `error` </td>
      <td> `{"link": "some_url"}`
      <td> `{"ok":"true|false", "error":""}`
    </tr>
-     
+   <tr>
+        <td> /validate_link </td>
+        <td> Validates list of links and returns list of `url` and `error` for each link</td>
+        <td> `{"links": ["some_url1", "some_url2", ...]}`
+        <td> `[{"url": "...", "error": "..."}, ...]`
+  </tr>
 </table>
