@@ -155,11 +155,22 @@ func TestServer_HandleFindBrokenLinks(t *testing.T) {
     }
 }
 
+func findURLAndErrorValuesInResponse(url string, error string, values []map[string]string) bool {
+    found := false
+    for _, v := range values {
+        if url == v["url"] && error == v["error"] {
+            found = true
+            break
+        }
+    }
+    return found
+}
+
 func TestServer_HandleLinksValidations(t *testing.T) {
     s := newServer()
 
     type urlResult struct {
-        Url   string `json:"url"`
+        URL   string `json:"url"`
         Error string `json:"error"`
     }
 
@@ -182,19 +193,19 @@ func TestServer_HandleLinksValidations(t *testing.T) {
             },
             expectedResponse: []urlResult{
                 {
-                    Url: "https://unreachable.unreachable/",
+                    URL:   "https://unreachable.unreachable/",
                     Error: "https://unreachable.unreachable/ - is unreachable",
                 },
                 {
-                    Url: "https://vk.com",
+                    URL:   "https://vk.com",
                     Error: "null",
                 },
                 {
-                    Url: "https://github.com/nonononovalid",
+                    URL:   "https://github.com/nonononovalid",
                     Error: "https://github.com/nonononovalid - bad status code response - 404",
                 },
                 {
-                    Url: "http://youtube.com",
+                    URL:   "http://youtube.com",
                     Error: "null",
                 },
             },
@@ -209,10 +220,8 @@ func TestServer_HandleLinksValidations(t *testing.T) {
                 if err := json.NewEncoder(b).Encode(tc.payload); err != nil {
                     t.Error(err)
                 }
-
                 req, _ := http.NewRequest(http.MethodPost, "/validate_links", b)
                 s.ServeHTTP(rec, req)
-
                 var resp []map[string]string
                 if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
                     t.Error(err)
@@ -220,14 +229,7 @@ func TestServer_HandleLinksValidations(t *testing.T) {
 
                 valid := true
                 for _, r := range tc.expectedResponse {
-                    found := false
-                    for _, v := range resp {
-                        if r.Url == v["url"] && r.Error == v["error"] {
-                            found = true
-                            break
-                        }
-                    }
-                    valid = found
+                    valid = findURLAndErrorValuesInResponse(r.URL, r.Error, resp)
                 }
 
                 if !valid {
