@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  linkschecker:
+    build: ./
+    container_name: linkschecker
+    command: go run ./src/cmd/apiserver/main.go
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - LOG_LEVEL=debug
+    restart: unless-stopped
+    networks:
+      - linkschecker
+
+networks:
+  linkschecker:
+    driver: bridge

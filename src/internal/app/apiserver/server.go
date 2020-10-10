@@ -3,7 +3,6 @@ package apiserver
 import (
     "context"
     "encoding/json"
-    "fmt"
     "net/http"
     "sync"
     "time"
@@ -110,7 +109,7 @@ func (s *server) HandleLinkValidation() func(http.ResponseWriter, *http.Request)
     }
 
     type response struct {
-        OK    string   `json:"ok"`
+        OK    string `json:"ok"`
         Error string `json:"error"`
     }
 
@@ -179,9 +178,7 @@ func (s *server) HandleLinksValidations() func(http.ResponseWriter, *http.Reques
             }(l)
         }
 
-        fmt.Println("Waiting")
         wg.Wait()
-        fmt.Println("yeah")
         s.respond(w, http.StatusOK, response)
     }
 }
