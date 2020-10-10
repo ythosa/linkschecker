@@ -13,12 +13,14 @@ import (
 func TestServer_HandleLinkValidation(t *testing.T) {
     s := newServer()
 
-    testCases := []struct {
+    type testCase struct {
         name             string
         payload          interface{}
         expectedCode     int
         expectedResponse interface{}
-    }{
+    }
+
+    testCases := []testCase{
         {
             name: "invalid request",
             payload: map[string]string{
@@ -36,7 +38,7 @@ func TestServer_HandleLinkValidation(t *testing.T) {
             },
             expectedCode: 200,
             expectedResponse: map[string]string{
-                "ok": "false",
+                "ok":    "false",
                 "error": "https://github.com/yththththththththaaa - bad status code response - 404",
             },
         },
@@ -47,35 +49,108 @@ func TestServer_HandleLinkValidation(t *testing.T) {
             },
             expectedCode: 200,
             expectedResponse: map[string]string{
-                "ok": "false",
+                "ok":    "false",
                 "error": "http://asdasfasasd//asd - is unreachable",
             },
         },
     }
 
     for _, tc := range testCases {
-        t.Run(tc.name, func(t *testing.T) {
-            rec := httptest.NewRecorder()
-            b := &bytes.Buffer{}
-            json.NewEncoder(b).Encode(tc.payload)
-            req, _ := http.NewRequest(http.MethodPost, "/validate_link", b)
+        func(tc testCase) {
+            t.Run(tc.name, func(t *testing.T) {
+                rec := httptest.NewRecorder()
+                b := &bytes.Buffer{}
+                if err := json.NewEncoder(b).Encode(tc.payload); err != nil {
+                    t.Error(err)
+                }
+                req, _ := http.NewRequest(http.MethodPost, "/validate_link", b)
 
-            s.ServeHTTP(rec, req)
+                s.ServeHTTP(rec, req)
 
-            var resp map[string]string
-            json.NewDecoder(rec.Body).Decode(&resp)
+                var resp map[string]string
 
-            assert.Equal(
-                t,
-                map[string]interface{}{
-                    "code":     tc.expectedCode,
-                    "response": tc.expectedResponse,
-                },
-                map[string]interface{}{
-                    "code":     rec.Code,
-                    "response": resp,
-                },
-            )
-        })
+                if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+                    t.Error(err)
+                }
+
+                assert.Equal(
+                    t,
+                    map[string]interface{}{
+                        "code":     tc.expectedCode,
+                        "response": tc.expectedResponse,
+                    },
+                    map[string]interface{}{
+                        "code":     rec.Code,
+                        "response": resp,
+                    },
+                )
+            })
+        }(tc)
+    }
+}
+
+func TestServer_HandleFindBrokenLinks(t *testing.T) {
+    s := newServer()
+
+    type testCase struct {
+        name             string
+        payload          interface{}
+        expectedCode     int
+        expectedResponse map[string]interface{}
+    }
+
+    testCases := []testCase{
+        {
+            name: "invalid request",
+            payload: map[string]string{
+                "error_json": "",
+            },
+            expectedCode: 400,
+            expectedResponse: map[string]interface{}{
+                "error": "json: unknown field \"error_json\"",
+            },
+        },
+        {
+            name: "all links valid",
+            payload: map[string]string{
+                "base_url": "https://ythosa.github.io",
+            },
+            expectedCode: 200,
+            expectedResponse: map[string]interface{}{
+                "broken_links": map[string]interface{}{},
+            },
+        },
+    }
+
+    for _, tc := range testCases {
+        func(tc testCase) {
+            t.Run(tc.name, func(t *testing.T) {
+                rec := httptest.NewRecorder()
+                b := &bytes.Buffer{}
+                if err := json.NewEncoder(b).Encode(tc.payload); err != nil {
+                    t.Error(err)
+                }
+                req, _ := http.NewRequest(http.MethodPost, "/get_broken_links", b)
+
+                s.ServeHTTP(rec, req)
+
+                var resp map[string]interface{}
+                if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+                    t.Error(err)
+                }
+
+                assert.Equal(
+                    t,
+                    map[string]interface{}{
+                        "code":     tc.expectedCode,
+                        "response": tc.expectedResponse,
+                    },
+                    map[string]interface{}{
+                        "code":     rec.Code,
+                        "response": resp,
+                    },
+                )
+            })
+        }(tc)
     }
 }

@@ -85,7 +85,9 @@ func (s *server) HandleFindBrokenLinks() http.HandlerFunc {
 
     return func(w http.ResponseWriter, r *http.Request) {
         req := &request{}
-        if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+        decoder := json.NewDecoder(r.Body)
+        decoder.DisallowUnknownFields()
+        if err := decoder.Decode(req); err != nil {
             s.error(w, http.StatusBadRequest, err)
             return
         }
@@ -144,7 +146,9 @@ func (s *server) HandleLinksValidations() func(http.ResponseWriter, *http.Reques
 
     return func(w http.ResponseWriter, r *http.Request) {
         req := &request{}
-        if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+        decoder := json.NewDecoder(r.Body)
+        decoder.DisallowUnknownFields()
+        if err := decoder.Decode(req); err != nil {
             s.error(w, http.StatusBadRequest, err)
             return
         }
