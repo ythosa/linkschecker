@@ -154,3 +154,86 @@ func TestServer_HandleFindBrokenLinks(t *testing.T) {
         }(tc)
     }
 }
+
+func TestServer_HandleLinksValidations(t *testing.T) {
+    s := newServer()
+
+    type urlResult struct {
+        Url   string `json:"url"`
+        Error string `json:"error"`
+    }
+
+    type testCase struct {
+        name             string
+        payload          map[string][]string
+        expectedResponse []urlResult
+    }
+
+    testCases := []testCase{
+        {
+            name: "invalid request",
+            payload: map[string][]string{
+                "links": {
+                    "http://youtube.com",
+                    "https://vk.com",
+                    "https://github.com/nonononovalid",
+                    "https://unreachable.unreachable/",
+                },
+            },
+            expectedResponse: []urlResult{
+                {
+                    Url: "https://unreachable.unreachable/",
+                    Error: "https://unreachable.unreachable/ - is unreachable",
+                },
+                {
+                    Url: "https://vk.com",
+                    Error: "null",
+                },
+                {
+                    Url: "https://github.com/nonononovalid",
+                    Error: "https://github.com/nonononovalid - bad status code response - 404",
+                },
+                {
+                    Url: "http://youtube.com",
+                    Error: "null",
+                },
+            },
+        },
+    }
+
+    for _, tc := range testCases {
+        func(tc testCase) {
+            t.Run(tc.name, func(t *testing.T) {
+                rec := httptest.NewRecorder()
+                b := &bytes.Buffer{}
+                if err := json.NewEncoder(b).Encode(tc.payload); err != nil {
+                    t.Error(err)
+                }
+
+                req, _ := http.NewRequest(http.MethodPost, "/validate_links", b)
+                s.ServeHTTP(rec, req)
+
+                var resp []map[string]string
+                if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+                    t.Error(err)
+                }
+
+                valid := true
+                for _, r := range tc.expectedResponse {
+                    found := false
+                    for _, v := range resp {
+                        if r.Url == v["url"] && r.Error == v["error"] {
+                            found = true
+                            break
+                        }
+                    }
+                    valid = found
+                }
+
+                if !valid {
+                    assert.Equal(t, tc.expectedResponse, resp)
+                }
+            })
+        }(tc)
+    }
+}

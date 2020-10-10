@@ -3,6 +3,7 @@ package apiserver
 import (
     "context"
     "encoding/json"
+    "fmt"
     "net/http"
     "sync"
     "time"
@@ -168,19 +169,19 @@ func (s *server) HandleLinksValidations() func(http.ResponseWriter, *http.Reques
                         URL:   string(l),
                         Error: err.Error(),
                     })
-
-                    return
+                } else {
+                    response = append(response, responseElement{
+                        URL:   string(l),
+                        Error: "null",
+                    })
                 }
-                response = append(response, responseElement{
-                    URL:   string(l),
-                    Error: "null",
-                })
                 mu.Unlock()
             }(l)
         }
 
+        fmt.Println("Waiting")
         wg.Wait()
-
+        fmt.Println("yeah")
         s.respond(w, http.StatusOK, response)
     }
 }
