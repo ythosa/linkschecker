@@ -9,6 +9,13 @@ linters:
     - gofmt
     - gosec
     - wsl
+    - varnamelen
+    - tagliatelle
+    - paralleltest
+    - noctx
+    - gofumpt
+    - exhaustivestruct
+    - gci
 
 linters-settings:
   funlen:
