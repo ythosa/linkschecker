@@ -2,44 +2,44 @@ package links
 
 import "fmt"
 
-// badStatusCodeException is type of error where the server under URL
+// badStatusCodeError is type of error where the server under URL
 // answers with status code other than 200.
-type badStatusCodeException struct {
-    url        ParsingURL
-    statusCode int
+type badStatusCodeError struct {
+	url        ParsingURL
+	statusCode int
 }
 
-// unreachableSiteException is type of error where the server under URL is unreachable.
-type unreachableSiteException struct {
-    url ParsingURL
+// unreachableSiteError is type of error where the server under URL is unreachable.
+type unreachableSiteError struct {
+	url ParsingURL
 }
 
-// invalidResponseTypeException is type of error where the server under URL
+// invalidResponseTypeError is type of error where the server under URL
 // returns an invalid response body.
-type invalidResponseTypeException struct {
-    url ParsingURL
+type invalidResponseTypeError struct {
+	url ParsingURL
 }
 
-func NewBadStatusCodeException(url ParsingURL, statusCode int) error {
-    return &badStatusCodeException{url: url, statusCode: statusCode}
+func NewBadStatusCodeError(url ParsingURL, statusCode int) error {
+	return &badStatusCodeError{url: url, statusCode: statusCode}
 }
 
-func NewUnreachableSiteException(url ParsingURL) error {
-    return &unreachableSiteException{url: url}
+func NewUnreachableSiteError(url ParsingURL) error {
+	return &unreachableSiteError{url: url}
 }
 
-func NewInvalidResponseTypeException(url ParsingURL) error {
-    return &invalidResponseTypeException{url: url}
+func NewInvalidResponseTypeError(url ParsingURL) error {
+	return &invalidResponseTypeError{url: url}
 }
 
-func (e *badStatusCodeException) Error() string {
-    return fmt.Sprintf("%s - bad status code response - %d", e.url, e.statusCode)
+func (e *badStatusCodeError) Error() string {
+	return fmt.Sprintf("%s - bad status code response - %d", e.url, e.statusCode)
 }
 
-func (e *unreachableSiteException) Error() string {
-    return fmt.Sprintf("%s - is unreachable", e.url)
+func (e *unreachableSiteError) Error() string {
+	return fmt.Sprintf("%s - is unreachable", e.url)
 }
 
-func (e *invalidResponseTypeException) Error() string {
-    return fmt.Sprintf("%s - invalid response body", e.url)
+func (e *invalidResponseTypeError) Error() string {
+	return fmt.Sprintf("%s - invalid response body", e.url)
 }

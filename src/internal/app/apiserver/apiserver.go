@@ -1,15 +1,20 @@
 package apiserver
 
 import (
-    "log"
-    "net/http"
+	"fmt"
+	"log"
+	"net/http"
 )
 
 // Start ...
 func Start(config *Config) error {
-    srv := newServer()
+	srv := newServer()
 
-    log.Printf("Server has been started on PORT=%s\n", config.BindAddr)
+	log.Printf("Server has been started on PORT=%s\n", config.BindAddr)
 
-    return http.ListenAndServe(config.BindAddr, srv)
+	if err := http.ListenAndServe(config.BindAddr, srv); err != nil {
+		return fmt.Errorf("error while starting server: %w", err)
+	}
+
+	return nil
 }

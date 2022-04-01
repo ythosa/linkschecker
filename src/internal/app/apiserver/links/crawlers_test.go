@@ -19,21 +19,21 @@ func TestExtract(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testCases {
-		res, doc, err := links.CheckURL(links.ParsingURL(tc.url))
+	for _, testCase := range testCases {
+		res, doc, err := links.CheckURL(links.ParsingURL(testCase.url))
 		if err != nil {
 			t.Error(err)
 		}
 		extracted := links.Extract(res, doc)
-		for _, l := range extracted {
+		for _, link := range extracted {
 			found := false
-			for _, e := range tc.expectedURLs {
-				if strings.EqualFold(string(l), e) {
+			for _, e := range testCase.expectedURLs {
+				if strings.EqualFold(string(link), e) {
 					found = true
 				}
 			}
 			if !found {
-				t.Errorf("%s not extracted", l)
+				t.Errorf("%s not extracted", link)
 			}
 		}
 	}
