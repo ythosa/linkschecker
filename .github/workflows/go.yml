@@ -22,7 +22,6 @@ jobs:
         run: go mod vendor
       - name: Install golang-lint
         run: |
-          # binary will be $(go env GOPATH)/bin/golangci-lint
           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.27.0
       - name: Lint Go Code
         run: make lint
